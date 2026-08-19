@@ -39,9 +39,12 @@ find . -type f -name "selinux_hide.c" | while read -r f; do
   cat >> "$f" << 'EOF'
 
 #include <linux/types.h>
+#include <linux/mm_types.h>
 bool ksu_input_hook = false;
 __attribute__((weak)) struct selinux_state selinux_state;
-__attribute__((weak)) void *selinux_kernel_status_page = NULL;
+__attribute__((weak)) struct page *selinux_kernel_status_page(struct selinux_state *state) {
+    return NULL;
+}
 EOF
 done
 
@@ -71,7 +74,7 @@ EOF
 fi
 
 # 5. Export symbols in security/selinux
-for f in security/selinux/ss/hashtab.c security/selinux/ss/ebitmap.c security/selinux/hooks.c security/selinux/selinuxfs.c; do
+for f in security/selinux/ss/hashtab.c security/selinux/ss/ebitmap.c security/selinux/ss/status.c security/selinux/hooks.c security/selinux/selinuxfs.c; do
   if [ -f "$f" ]; then
     sed -i '1i #include <linux/export.h>' "$f"
   fi
@@ -81,6 +84,7 @@ sed -i '$a EXPORT_SYMBOL(hashtab_search);' security/selinux/ss/hashtab.c || true
 sed -i '$a EXPORT_SYMBOL(hashtab_insert);' security/selinux/ss/hashtab.c || true
 sed -i '$a EXPORT_SYMBOL(ebitmap_set_bit);' security/selinux/ss/ebitmap.c || true
 sed -i '$a EXPORT_SYMBOL(selinux_state);' security/selinux/hooks.c || true
+sed -i '$a EXPORT_SYMBOL(selinux_kernel_status_page);' security/selinux/ss/status.c || true
 sed -i '$a EXPORT_SYMBOL(selinux_kernel_status_page);' security/selinux/selinuxfs.c || true
 
 echo "[+] KernelSU Next x86_64 legacy patches applied."
