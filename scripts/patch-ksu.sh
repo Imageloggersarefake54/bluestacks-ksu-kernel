@@ -18,8 +18,8 @@ find . -type f -name "rules.c" | while read -r f; do
 #include <linux/types.h>
 
 __attribute__((weak)) void selnl_notify_policyload(u32 seqno) {}
-__attribute__((weak)) int selinux_status_update_policyload(struct selinux_state *state, int seqno) { return 0; }
-__attribute__((weak)) void avc_ss_reset(u32 seqno) {}
+__attribute__((weak)) void selinux_status_update_policyload(struct selinux_state *state, int seqno) {}
+__attribute__((weak)) int avc_ss_reset(struct selinux_avc *avc, u32 seqno) { return 0; }
 EOF
 done
 
