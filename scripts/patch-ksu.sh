@@ -45,14 +45,14 @@ __attribute__((weak)) int ebitmap_set_bit(struct ebitmap *e, unsigned long bit, 
 __attribute__((weak)) int ebitmap_get_bit(struct ebitmap *e, unsigned long bit) {
     return 0;
 }
-__attribute__((weak)) void *avtab_search_node(void *h, void *key) {
+__attribute__((weak)) struct avtab_node *avtab_search_node(struct avtab *h, struct avtab_key *key) {
     return NULL;
 }
-__attribute__((weak)) void *avtab_search_node_next(void *node, int spec) {
+__attribute__((weak)) struct avtab_node *avtab_search_node_next(struct avtab_node *node, int specified) {
     return NULL;
 }
-__attribute__((weak)) int avtab_insert_nonunique(void *h, void *key, void *datum) {
-    return 0;
+__attribute__((weak)) struct avtab_node *avtab_insert_nonunique(struct avtab *h, struct avtab_key *key, struct avtab_datum *datum) {
+    return NULL;
 }
 EOF
 done
