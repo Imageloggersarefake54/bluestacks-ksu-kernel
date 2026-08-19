@@ -22,8 +22,8 @@ CONFIG_NUMA=y
 CONFIG_SPARSEMEM=y
 CONFIG_TRANSPARENT_HUGEPAGE=y
 
-# ── KernelSU Next (CRITICAL) ──────────────────────────────────────────────
-CONFIG_KSU=y
+# ── KernelSU Next (CRITICAL - LKM mode) ───────────────────────────────────
+CONFIG_KSU=m
 CONFIG_KSU_KPROBE_HOOKS=y
 
 # ── Kprobes (required for KSU kprobe-based hooks) ─────────────────────────

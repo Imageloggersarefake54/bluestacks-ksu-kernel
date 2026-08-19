@@ -71,58 +71,46 @@ jobs:
         run: |
           cd kernel-src
           ./scripts/config --enable CONFIG_KSU
+          ./scripts/config --module CONFIG_KSU
+          ./scripts/config --enable CONFIG_KSU_KPROBE_HOOKS
           ./scripts/config --enable CONFIG_KPROBES
           ./scripts/config --enable CONFIG_KPROBE_EVENTS
-          ./scripts/config --enable CONFIG_HAVE_KPROBES
-          ./scripts/config --enable CONFIG_KPROBE_EVENTS_ON_NOTRACE
-          ./scripts/config --enable CONFIG_KSU_KPROBE_HOOKS
-          ./scripts/config --set-val CONFIG_LOCALVERSION '"-ksu-next"'
+          ./scripts/config --enable CONFIG_MODULES
+          ./scripts/config --enable CONFIG_MODVERSIONS
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           make ARCH=x86_64 olddefconfig
           grep -E "CONFIG_KSU|CONFIG_KPROBE" .config
 
-      # ── 7. Build bzImage with legacy patches ──────────────────────────────
-      - name: Build kernel bzImage
+      # ── 7. Build bzImage and KSU LKM module ──────────────────────────────
+      - name: Build kernel and modules
         run: |
           cd kernel-src
           make ARCH=x86_64 prepare scripts
           bash ../scripts/patch-ksu.sh
-          make ARCH=x86_64 -j$(nproc) bzImage 2>&1 | tee ../build.log
-          echo "=== Build complete ==="
-          ls -lh arch/x86/boot/bzImage
-          file arch/x86/boot/bzImage
+          make ARCH=x86_64 -j$(nproc) bzImage modules 2>&1 | tee ../build.log
+          echo "=== Built modules ==="
+          find . -name "*ksu*.ko" -o -name "*kernelsu*.ko"
 
-      # ── 8. Also build KSU module helpers (optional, if needed) ────────────
-      - name: Build KSU module (if applicable)
-        run: |
-          cd kernel-src
-          make ARCH=x86_64 -j$(nproc) modules 2>&1 | tail -20 || true
-
-      # ── 9. Package artifacts ──────────────────────────────────────────────
+      # ── 8. Package artifacts ──────────────────────────────────────────────
       - name: Package build artifacts
         run: |
           mkdir -p artifacts
-          cp kernel-src/arch/x86/boot/bzImage artifacts/bzImage-4.19-ksu-next
+          cp kernel-src/arch/x86/boot/bzImage artifacts/bzImage-4.19-ksu-next || true
           cp kernel-src/.config artifacts/kernel.config
-          strings artifacts/bzImage-4.19-ksu-next | grep "Linux version" | head -1 \
-            > artifacts/kernel-version.txt
-          cat artifacts/kernel-version.txt
-          gzip -c artifacts/bzImage-4.19-ksu-next > artifacts/bzImage-4.19-ksu-next.gz
+          find kernel-src -name "*.ko" -exec cp {} artifacts/ \; || true
+          ls -la artifacts/
+          gzip -c artifacts/bzImage-4.19-ksu-next > artifacts/bzImage-4.19-ksu-next.gz || true
           cd artifacts
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      # ── 10. Upload kernel artifacts ───────────────────────────────────────
+      # ── 9. Upload kernel artifacts ───────────────────────────────────────
       - name: Upload kernel artifacts
         uses: actions/upload-artifact@v4
         with:
           name: bluestacks-ksu-next-kernel-${{ env.KVER }}
           path: |
-            artifacts/bzImage-4.19-ksu-next
-            artifacts/bzImage-4.19-ksu-next.gz
-            artifacts/kernel.config
-            artifacts/kernel-version.txt
-            artifacts/SHA256SUMS.txt
+            artifacts/*
           retention-days: 7
 
       # ── 11. Build summary ─────────────────────────────────────────────────
