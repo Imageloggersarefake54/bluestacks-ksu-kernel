@@ -22,13 +22,13 @@ find . -type f -name "sepolicy.c" | while read -r f; do
 #define SECCLASS_SECURITY 1
 #endif
 
-__attribute__((weak)) void *hashtab_search(void *h, const void *key) {
+__attribute__((weak)) void *hashtab_search(struct hashtab *h, const void *k) {
     return NULL;
 }
-__attribute__((weak)) int hashtab_insert(void *h, void *key, void *datum) {
+__attribute__((weak)) int hashtab_insert(struct hashtab *h, void *k, void *d) {
     return 0;
 }
-__attribute__((weak)) int ebitmap_set_bit(void *e, unsigned long bit, int value) {
+__attribute__((weak)) int ebitmap_set_bit(struct ebitmap *e, unsigned long bit, int value) {
     return 0;
 }
 EOF
