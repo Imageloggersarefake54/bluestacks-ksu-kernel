@@ -110,12 +110,7 @@ jobs:
           # Patch compatibility macros for x86_64 legacy 4.19 kernels
           find drivers/kernelsu/ -name "*.c" -o -name "*.h" | xargs sed -i '1s/^/#ifndef untagged_addr\n#define untagged_addr(addr) (addr)\n#endif\n#ifndef __nocfi\n#define __nocfi\n#endif\n#ifndef phys_to_page\n#define phys_to_page(phys) pfn_to_page(__phys_to_pfn(phys))\n#endif\n/' || true
           # Guarantee SELinux symbol resolution by adding the definitions directly to KernelSU selinux helper
-          cat << 'EOF' >> drivers/kernelsu/selinux/sepolicy.c
-
-#include <linux/types.h>
-/* Fallback symbols if not exported by core SELinux */
-extern struct selinux_state selinux_state;
-EOF
+          echo -e "\n#include <linux/types.h>\nextern struct selinux_state selinux_state;" >> drivers/kernelsu/selinux/sepolicy.c
           # Export unexported SELinux symbols in security/selinux/
           for f in security/selinux/ss/hashtab.c security/selinux/ss/ebitmap.c security/selinux/hooks.c security/selinux/selinuxfs.c; do
             if [ -f "$f" ]; then
