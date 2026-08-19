@@ -64,8 +64,8 @@ CONFIG_SW_SYNC=y
 CONFIG_SW_SYNC_USER=y
 
 # ── VirtualBox guest drivers ───────────────────────────────────────────────
-CONFIG_VBOXGUEST=m
-CONFIG_DRM_VBOXVIDEO=m
+CONFIG_VBOXGUEST=y
+CONFIG_DRM_VBOXVIDEO=y
 
 # ── VirtIO (for BlueStacks virtio-net) ────────────────────────────────────
 CONFIG_VIRTIO=y
