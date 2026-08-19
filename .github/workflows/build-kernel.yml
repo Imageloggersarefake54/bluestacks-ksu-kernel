@@ -81,25 +81,23 @@ jobs:
           make ARCH=x86_64 olddefconfig
           grep -E "CONFIG_KSU|CONFIG_KPROBE" .config
 
-      # ── 7. Build bzImage and KSU LKM module ──────────────────────────────
-      - name: Build kernel and modules
+      # ── 7. Build KSU LKM module ───────────────────────────────────────────
+      - name: Build KSU LKM module
         run: |
           cd kernel-src
           make ARCH=x86_64 prepare scripts
           bash ../scripts/patch-ksu.sh
-          make ARCH=x86_64 -j$(nproc) bzImage modules 2>&1 | tee ../build.log
-          echo "=== Built modules ==="
-          find . -name "*ksu*.ko" -o -name "*kernelsu*.ko"
+          make ARCH=x86_64 -j$(nproc) M=drivers/kernelsu modules 2>&1 | tee ../build.log
+          echo "=== Built KSU modules ==="
+          find . -name "*.ko" -ls
 
       # ── 8. Package artifacts ──────────────────────────────────────────────
       - name: Package build artifacts
         run: |
           mkdir -p artifacts
-          cp kernel-src/arch/x86/boot/bzImage artifacts/bzImage-4.19-ksu-next || true
           cp kernel-src/.config artifacts/kernel.config
-          find kernel-src -name "*.ko" -exec cp {} artifacts/ \; || true
+          find kernel-src -name "*.ko" -exec cp -v {} artifacts/ \;
           ls -la artifacts/
-          gzip -c artifacts/bzImage-4.19-ksu-next > artifacts/bzImage-4.19-ksu-next.gz || true
           cd artifacts
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
