@@ -58,7 +58,9 @@ jobs:
             "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" \
             | bash -s legacy
           echo "KernelSU Next driver integrated"
-          ls KernelSU/kernel/
+          # Show what was actually created (path varies by branch)
+          find . -maxdepth 3 -name "*.c" -path "*/KernelSU*" | head -10 || true
+          find . -maxdepth 2 -name "Makefile" -newer .config | head -5 || true
 
       # ── 6. Enable KSU + kprobe config options ────────────────────────────
       - name: Enable KSU config options
