@@ -7,8 +7,8 @@ set -e
 echo "[*] Applying KernelSU Next x86_64 legacy patches..."
 
 # 1. Compatibility macros in all KernelSU source files
-find . -type f \( -name "*.c" -o -name "*.h" \) -path "*KernelSU*" | while read -r file; do
-  sed -i '1s/^/#ifndef untagged_addr\n#define untagged_addr(addr) (addr)\n#endif\n#ifndef __nocfi\n#define __nocfi\n#endif\n#ifndef phys_to_page\n#define phys_to_page(phys) pfn_to_page(__phys_to_pfn(phys))\n#endif\n/' "$file"
+find drivers/kernelsu KernelSU-Next -type f \( -name "*.c" -o -name "*.h" \) 2>/dev/null | while read -r file; do
+  sed -i '1s/^/#ifndef untagged_addr\n#define untagged_addr(addr) (addr)\n#endif\n#ifndef __nocfi\n#define __nocfi\n#endif\n#ifndef phys_to_page\n#define phys_to_page(phys) pfn_to_page(__phys_to_pfn(phys))\n#endif\n#ifndef preempt_enable_no_resched_notrace\n#define preempt_enable_no_resched_notrace() preempt_enable_notrace()\n#endif\n/' "$file"
 done
 
 # 2. Add weak symbol fallbacks for all unresolved SELinux functions in rules.c and sepolicy.c
