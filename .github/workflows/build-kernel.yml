@@ -86,15 +86,15 @@ jobs:
           cd kernel-src
           # Prepare kernel headers and scripts
           make ARCH=x86_64 prepare scripts
-          # Build SELinux generated headers specifically
-          make ARCH=x86_64 security/selinux/flask.h security/selinux/av_permissions.h || make ARCH=x86_64 security/selinux/built-in.a || true
-          # If still missing in security/selinux/include/, symlink/copy from security/selinux/
-          if [ -f security/selinux/flask.h ] && [ ! -f security/selinux/include/flask.h ]; then
+          # Build security subsystem (which compiles genheaders and creates flask.h)
+          make ARCH=x86_64 security/
+          # Ensure flask.h and av_permissions.h are present in security/selinux/include/
+          if [ -f security/selinux/flask.h ]; then
             mkdir -p security/selinux/include
-            cp security/selinux/flask.h security/selinux/include/flask.h
-            cp security/selinux/av_permissions.h security/selinux/include/av_permissions.h
+            cp -v security/selinux/flask.h security/selinux/include/
+            cp -v security/selinux/av_permissions.h security/selinux/include/
           fi
-          # Also check include/generated/
+          # Verify flask.h locations
           find . -name "flask.h"
           # Now compile bzImage
           make ARCH=x86_64 -j$(nproc) bzImage 2>&1 | tee ../build.log
