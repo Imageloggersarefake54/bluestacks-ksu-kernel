@@ -2,7 +2,7 @@ name: Build BlueStacks KernelSU Next Kernel
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
     inputs:
       kernel_version:
