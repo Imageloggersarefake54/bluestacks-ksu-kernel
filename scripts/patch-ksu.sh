@@ -11,7 +11,18 @@ find . -type f \( -name "*.c" -o -name "*.h" \) -path "*KernelSU*" | while read 
   sed -i '1s/^/#ifndef untagged_addr\n#define untagged_addr(addr) (addr)\n#endif\n#ifndef __nocfi\n#define __nocfi\n#endif\n#ifndef phys_to_page\n#define phys_to_page(phys) pfn_to_page(__phys_to_pfn(phys))\n#endif\n/' "$file"
 done
 
-# 2. Add weak symbol fallbacks for SELinux functions in sepolicy.c
+# 2. Add weak symbol fallbacks for all unresolved SELinux functions in rules.c and sepolicy.c
+find . -type f -name "rules.c" | while read -r f; do
+  cat >> "$f" << 'EOF'
+
+#include <linux/types.h>
+
+__attribute__((weak)) void selnl_notify_policyload(u32 seqno) {}
+__attribute__((weak)) int selinux_status_update_policyload(struct selinux_state *state, int seqno) { return 0; }
+__attribute__((weak)) void avc_ss_reset(u32 seqno) {}
+EOF
+done
+
 find . -type f -name "sepolicy.c" | while read -r f; do
   cat >> "$f" << 'EOF'
 
@@ -29,6 +40,18 @@ __attribute__((weak)) int hashtab_insert(struct hashtab *h, void *k, void *d) {
     return 0;
 }
 __attribute__((weak)) int ebitmap_set_bit(struct ebitmap *e, unsigned long bit, int value) {
+    return 0;
+}
+__attribute__((weak)) int ebitmap_get_bit(struct ebitmap *e, unsigned long bit) {
+    return 0;
+}
+__attribute__((weak)) void *avtab_search_node(void *h, void *key) {
+    return NULL;
+}
+__attribute__((weak)) void *avtab_search_node_next(void *node, int spec) {
+    return NULL;
+}
+__attribute__((weak)) int avtab_insert_nonunique(void *h, void *key, void *datum) {
     return 0;
 }
 EOF
@@ -74,17 +97,10 @@ EOF
 fi
 
 # 5. Export symbols in security/selinux
-for f in security/selinux/ss/hashtab.c security/selinux/ss/ebitmap.c security/selinux/ss/status.c security/selinux/hooks.c security/selinux/selinuxfs.c; do
+for f in security/selinux/ss/hashtab.c security/selinux/ss/ebitmap.c security/selinux/ss/status.c security/selinux/ss/avtab.c security/selinux/ss/services.c security/selinux/hooks.c security/selinux/selinuxfs.c security/selinux/nlmsg.c security/selinux/avc.c; do
   if [ -f "$f" ]; then
     sed -i '1i #include <linux/export.h>' "$f"
   fi
 done
-
-sed -i '$a EXPORT_SYMBOL(hashtab_search);' security/selinux/ss/hashtab.c || true
-sed -i '$a EXPORT_SYMBOL(hashtab_insert);' security/selinux/ss/hashtab.c || true
-sed -i '$a EXPORT_SYMBOL(ebitmap_set_bit);' security/selinux/ss/ebitmap.c || true
-sed -i '$a EXPORT_SYMBOL(selinux_state);' security/selinux/hooks.c || true
-sed -i '$a EXPORT_SYMBOL(selinux_kernel_status_page);' security/selinux/ss/status.c || true
-sed -i '$a EXPORT_SYMBOL(selinux_kernel_status_page);' security/selinux/selinuxfs.c || true
 
 echo "[+] KernelSU Next x86_64 legacy patches applied."
