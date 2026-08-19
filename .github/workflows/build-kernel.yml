@@ -84,10 +84,18 @@ jobs:
       - name: Build kernel bzImage
         run: |
           cd kernel-src
-          # Prepare kernel headers and scripts properly
+          # Prepare kernel headers and scripts
           make ARCH=x86_64 prepare scripts
-          # Build selinux host tools and generated headers via Kbuild
-          make ARCH=x86_64 security/selinux/
+          # Build SELinux generated headers specifically
+          make ARCH=x86_64 security/selinux/flask.h security/selinux/av_permissions.h || make ARCH=x86_64 security/selinux/built-in.a || true
+          # If still missing in security/selinux/include/, symlink/copy from security/selinux/
+          if [ -f security/selinux/flask.h ] && [ ! -f security/selinux/include/flask.h ]; then
+            mkdir -p security/selinux/include
+            cp security/selinux/flask.h security/selinux/include/flask.h
+            cp security/selinux/av_permissions.h security/selinux/include/av_permissions.h
+          fi
+          # Also check include/generated/
+          find . -name "flask.h"
           # Now compile bzImage
           make ARCH=x86_64 -j$(nproc) bzImage 2>&1 | tee ../build.log
           echo "=== Build complete ==="
