@@ -1,0 +1,133 @@
+name: Build BlueStacks KernelSU Next Kernel
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      kernel_version:
+        description: 'Kernel version tag (e.g. v4.19.195)'
+        required: false
+        default: 'v4.19.195'
+
+jobs:
+  build-kernel:
+    name: Build Linux 4.19 x86_64 + KernelSU Next Legacy
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      # ── 1. Checkout this repo (contains our scripts + config) ──────────────
+      - name: Checkout build repo
+        uses: actions/checkout@v4
+
+      # ── 2. Install build dependencies ─────────────────────────────────────
+      - name: Install build deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential flex bison libssl-dev libelf-dev \
+            bc git curl python3 libncurses-dev pahole dwarves \
+            gcc binutils make pkg-config
+
+      # ── 3. Clone Linux 4.19 stable kernel ────────────────────────────────
+      - name: Clone Linux 4.19 stable kernel source
+        run: |
+          KVER="${{ github.event.inputs.kernel_version || 'v4.19.195' }}"
+          echo "Building kernel: $KVER"
+          git clone --depth=1 \
+            --branch "$KVER" \
+            https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git \
+            kernel-src
+          echo "KVER=$KVER" >> $GITHUB_ENV
+
+      # ── 4. Apply BlueStacks-style x86 Android kernel config ──────────────
+      - name: Apply kernel config
+        run: |
+          cd kernel-src
+          # Copy our prepared config (android-x86 / BlueStacks style)
+          cp ../config/bluestacks_pie64_defconfig .config
+          # Resolve any new symbols with defaults
+          make ARCH=x86_64 olddefconfig
+
+      # ── 5. Integrate KernelSU Next legacy driver ──────────────────────────
+      - name: Integrate KernelSU Next legacy
+        run: |
+          cd kernel-src
+          curl -LSs \
+            "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" \
+            | bash -s legacy
+          echo "KernelSU Next driver integrated"
+          ls KernelSU/kernel/
+
+      # ── 6. Enable KSU + kprobe config options ────────────────────────────
+      - name: Enable KSU config options
+        run: |
+          cd kernel-src
+          ./scripts/config --enable CONFIG_KSU
+          ./scripts/config --enable CONFIG_KPROBES
+          ./scripts/config --enable CONFIG_KPROBE_EVENTS
+          ./scripts/config --enable CONFIG_HAVE_KPROBES
+          ./scripts/config --enable CONFIG_KPROBE_EVENTS_ON_NOTRACE
+          ./scripts/config --enable CONFIG_KSU_KPROBE_HOOKS
+          ./scripts/config --set-val CONFIG_LOCALVERSION '"-ksu-next"'
+          # Disable module signature enforcement (emulator doesn't need it)
+          ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
+          # Re-run olddefconfig to accept all changes
+          make ARCH=x86_64 olddefconfig
+          # Show KSU-related config to confirm
+          grep -E "CONFIG_KSU|CONFIG_KPROBE" .config
+
+      # ── 7. Build bzImage ──────────────────────────────────────────────────
+      - name: Build kernel bzImage
+        run: |
+          cd kernel-src
+          make ARCH=x86_64 -j$(nproc) bzImage 2>&1 | tee ../build.log
+          echo "=== Build complete ==="
+          ls -lh arch/x86/boot/bzImage
+          # Show embedded kernel version
+          file arch/x86/boot/bzImage
+
+      # ── 8. Also build KSU module helpers (optional, if needed) ────────────
+      - name: Build KSU module (if applicable)
+        run: |
+          cd kernel-src
+          # Build kernel modules - needed for some KSU functionality
+          make ARCH=x86_64 -j$(nproc) modules 2>&1 | tail -20 || true
+
+      # ── 9. Package artifacts ──────────────────────────────────────────────
+      - name: Package build artifacts
+        run: |
+          mkdir -p artifacts
+          cp kernel-src/arch/x86/boot/bzImage artifacts/bzImage-4.19-ksu-next
+          cp kernel-src/.config artifacts/kernel.config
+          # Extract and save kernel version string
+          strings artifacts/bzImage-4.19-ksu-next | grep "Linux version" | head -1 \
+            > artifacts/kernel-version.txt
+          cat artifacts/kernel-version.txt
+          # Compress bzImage for download
+          gzip -k artifacts/bzImage-4.19-ksu-next
+
+      # ── 10. Upload artifacts ──────────────────────────────────────────────
+      - name: Upload kernel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluestacks-ksu-next-kernel-${{ env.KVER }}
+          path: |
+            artifacts/
+            build.log
+          retention-days: 7
+
+      # ── 11. Print build summary ───────────────────────────────────────────
+      - name: Build summary
+        run: |
+          echo "## Kernel Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Kernel Version | ${{ env.KVER }}-ksu-next |" >> $GITHUB_STEP_SUMMARY
+          echo "| Architecture | x86_64 |" >> $GITHUB_STEP_SUMMARY
+          echo "| KernelSU Next | Legacy driver (kprobe-based) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target | BlueStacks 5 Pie64 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat artifacts/kernel-version.txt >> $GITHUB_STEP_SUMMARY
