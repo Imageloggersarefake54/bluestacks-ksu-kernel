@@ -57,7 +57,17 @@ __attribute__((weak)) struct avtab_node *avtab_insert_nonunique(struct avtab *h,
 EOF
 done
 
-# 3. Add weak symbol fallbacks for selinux_hide.c
+# 3. Add weak symbol fallbacks for selinux_hide.c and kernel_umount.c
+find . -type f -name "kernel_umount.c" | while read -r f; do
+  cat >> "$f" << 'EOF'
+
+#include <linux/path.h>
+__attribute__((weak)) int path_umount(struct path *path, int flags) {
+    return 0;
+}
+EOF
+done
+
 find . -type f -name "selinux_hide.c" | while read -r f; do
   cat >> "$f" << 'EOF'
 
