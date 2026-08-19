@@ -107,8 +107,8 @@ jobs:
             echo "#endif" >> security/selinux/include/av_permissions.h
             cp security/selinux/include/av_permissions.h security/selinux/av_permissions.h
           fi
-          # Also patch KernelSU CFLAGS if needed
-          find drivers/ -name "Makefile" | xargs grep -l "kernelsu" || true
+          # Patch untagged_addr macro for x86_64 legacy kernels (arm64 macro not present on x86_64 4.19)
+          find drivers/kernelsu/ -name "*.c" -o -name "*.h" | xargs sed -i '1s/^/#ifndef untagged_addr\n#define untagged_addr(addr) (addr)\n#endif\n/' || true
           # Compile bzImage
           make ARCH=x86_64 -j$(nproc) bzImage 2>&1 | tee ../build.log
           echo "=== Build complete ==="
