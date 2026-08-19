@@ -180,9 +180,13 @@ CONFIG_MODVERSIONS=y
 
 # ── Printk / logging ──────────────────────────────────────────────────────
 CONFIG_PRINTK=y
-CONFIG_EARLY_PRINTK=y
-CONFIG_SERIAL_8250=y
-CONFIG_SERIAL_8250_CONSOLE=y
+# CONFIG_EARLY_PRINTK is not set
+# CONFIG_SERIAL_8250 is not set
+# CONFIG_SERIAL_8250_CONSOLE is not set
+CONFIG_TTY=y
+CONFIG_VT=y
+CONFIG_VT_CONSOLE=y
+CONFIG_VIRTIO_CONSOLE=y
 
 # ── Misc ──────────────────────────────────────────────────────────────────
 CONFIG_NAMESPACES=y
